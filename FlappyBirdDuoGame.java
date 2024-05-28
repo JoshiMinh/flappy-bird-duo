@@ -133,7 +133,7 @@ public class FlappyBirdDuoGame extends JPanel implements ActionListener, KeyList
 
     public void generateObstacle() {
         int Space = space; // space between upper and lower obstacles
-        int width = 55;
+        int width = 60;
         int height = random.nextInt(300) + 50; // random height for the lower obstacle
     
         obstacles.add(new Rectangle(800, 0, width, height)); // upper obstacle
@@ -221,12 +221,11 @@ public class FlappyBirdDuoGame extends JPanel implements ActionListener, KeyList
         for (Rectangle obstacle : obstacles) {
             int pipeSpace = space; // space between upper and lower pipes
             int lowerPipeHeight = 600 - obstacle.height - pipeSpace;
-    
-            // Draw lower pipe
-            g.drawImage(lowerPipeIcon.getImage(), obstacle.x, obstacle.y + obstacle.height + pipeSpace, obstacle.width, lowerPipeHeight, this);
 
             // Draw upper pipe
-            g.drawImage(upperPipeIcon.getImage(), obstacle.x, obstacle.y, obstacle.width, obstacle.height, this);
+            g.drawImage(upperPipeIcon.getImage(), obstacle.x, obstacle.y, obstacle.width, obstacle.height, this);    
+            // Draw lower pipe
+            g.drawImage(lowerPipeIcon.getImage(), obstacle.x, obstacle.y + obstacle.height + pipeSpace, obstacle.width, obstacle.height, this);
         }
     
         // Draw ground
@@ -261,12 +260,17 @@ public class FlappyBirdDuoGame extends JPanel implements ActionListener, KeyList
         g.setColor(Color.WHITE);
         g.drawString(scoreString, x, y);
 
-        if(!endGame && !startGame){
-            ImageIcon START = new ImageIcon("Themes/StartButton.png");
+        if (!endGame && !startGame) {
+            ImageIcon START = new ImageIcon("Images/StartButton.png");
             START = new ImageIcon(START.getImage().getScaledInstance(150, 60, Image.SCALE_DEFAULT));
-            START.paintIcon(this, g, birdX-55, 400);
-        }
-
+        
+            int frameWidth = getWidth();  // Get the width of the frame
+            int buttonWidth = START.getIconWidth();
+            // Calculate the centered x-coordinate
+            int centerX = (frameWidth - buttonWidth) / 2;
+        
+            START.paintIcon(this, g, centerX, 400);
+        }        
         getLevel((int) score);
     }
     
@@ -286,7 +290,7 @@ public class FlappyBirdDuoGame extends JPanel implements ActionListener, KeyList
         else if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
             timer.stop();
         
-            ImageIcon pause = new ImageIcon("Themes/pause.png");
+            ImageIcon pause = new ImageIcon("Images/pause.png");
             pause = new ImageIcon(pause.getImage().getScaledInstance(30, 30, Image.SCALE_DEFAULT));
         
             // Show pause dialog with three options
