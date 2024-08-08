@@ -4,7 +4,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.util.ArrayList; 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import javax.sound.sampled.AudioInputStream;
@@ -14,101 +14,82 @@ import javax.sound.sampled.FloatControl;
 
 public class FlappyBirdDuoGame extends JPanel implements ActionListener, KeyListener {
     private Timer timer;
-    private int birdX, birdY, birdVelocity, rotationAngle;
-    private List<Rectangle> obstacles;
-    private Random random;
-    private float score, gameVol = 0.8f;
-    private boolean endGame = false, startGame = false, Down = true;
+    private int birdX, birdY, bird2X, bird2Y;
+    private int birdVelocity, birdVelocityX, bird2Velocity, bird2VelocityX, hit; // Added velocities for second bird
+    private int rotationAngle, obstacleCount = 0, difficulty = 1;
+    private List<Rectangle> obstacles = new ArrayList<>();
+    private Random random = new Random();
+    private float gameVol = 0.8f;
+    private boolean endGame = false, startGame = false, Down = true, SHIFTED = false;
 
+    // Game settings
     private int Tick, space, distance, velocity, gravity;
 
-    private ImageIcon base;
-    private ImageIcon deadBird;
-    private ImageIcon flappyBirdIcon;
-    private ImageIcon backgroundImage;
-    private ImageIcon upperPipeIcon;
-    private ImageIcon lowerPipeIcon;
+    // Game assets
+    private ImageIcon base, deadBird, flappyBirdIcon, flappyBird2Icon, backgroundImage, upperPipeIcon, lowerPipeIcon;
 
     public static void main(String[] args) {
+        // Setup main game window
         JFrame frame = new JFrame("Flappy Bird Duo");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
-        ImageIcon icon = new ImageIcon("Images/Flappy_Bird_Duo_icon.png");
-        frame.setIconImage(icon.getImage());
-
+        frame.setIconImage(new ImageIcon("Images/Flappy_Bird_Duo_icon.png").getImage());
         frame.setSize(800, 600);
         frame.setResizable(false);
-        frame.add(new FlappyBirdDuoGame());  // Replace with actual values
+        frame.add(new FlappyBirdDuoGame());
         frame.setVisible(true);
         frame.setLocationRelativeTo(null);
     }
 
     public FlappyBirdDuoGame() {
-        setDifficulty(1);
+        setDifficulty(1); // Initialize difficulty
 
+        // Load and scale images
         flappyBirdIcon = new ImageIcon("Images/bird.png");
+        flappyBird2Icon = new ImageIcon("Images/bird2.png"); // Load second bird image
         backgroundImage = new ImageIcon("Images/background.png");
         upperPipeIcon = new ImageIcon("Images/obsdown.png");
         lowerPipeIcon = new ImageIcon("Images/obs.png");
         base = new ImageIcon("Images/base.png");
         deadBird = new ImageIcon("Images/dead_bird.png");
 
+        // Scale images
         backgroundImage = new ImageIcon(backgroundImage.getImage().getScaledInstance(800, 600, Image.SCALE_DEFAULT));
         flappyBirdIcon = new ImageIcon(flappyBirdIcon.getImage().getScaledInstance(50, 50, Image.SCALE_DEFAULT));
+        flappyBird2Icon = new ImageIcon(flappyBird2Icon.getImage().getScaledInstance(50, 50, Image.SCALE_DEFAULT)); // Scale second bird
         base = new ImageIcon(base.getImage().getScaledInstance(800, 100, Image.SCALE_DEFAULT));
 
-        // Values
-        score = 0;
-        birdX = 200; //370
+        // Initialize game variables
+        birdX = 200;
         birdY = 250;
-        birdVelocity = 0;
+        bird2X = 600; // Initial position for second bird
+        bird2Y = 250;
+        birdVelocity = birdVelocityX = 0;
+        bird2Velocity = bird2VelocityX = 0; // Initialize second bird's velocities
         rotationAngle = 0;
         obstacles = new ArrayList<>();
         random = new Random();
 
+        // Setup game
         addKeyListener(this);
         setFocusable(true);
 
         timer = new Timer(150, this);
         timer.start();
 
-        generateObstacle();
+        generateObstacle(); // Create the first obstacle
     }
 
-    public void setDifficulty(int difficulty){
-        switch(difficulty) {
+    public void setDifficulty(int difficulty) {
+        // Set parameters based on difficulty level
+        switch (difficulty) {
             case 1:
-                Tick = 16;
-                space = 190;
-                distance = 530;
-                velocity = 4;
-                gravity = 1;
-                break;
+                Tick = 16; space = 190; distance = 530; velocity = 4; gravity = 1; break;
             case 2:
-                Tick = 12;
-                space = 150;
-                distance = 470;
-                velocity = 6;
-                gravity = 1;
-                break;
+                Tick = 12; space = 150; distance = 470; velocity = 6; gravity = 1; break;
             case 3:
-                Tick = 8;
-                space = 110;
-                distance = 410;
-                velocity = 8;
-                gravity = 2;
-                break;
-        }
-    }
-
-    public void getLevel(int level){
-        if(level == 30){
-            setDifficulty(2);
-            timer.setDelay(Tick);
-        }
-        else if(level == 80){
-            setDifficulty(3);
-            timer.setDelay(Tick);
+                Tick = 8; space = 110; distance = 410; velocity = 8; gravity = 2; break;
+            default:
+                throw new IllegalArgumentException("Invalid difficulty level");
         }
     }
 
@@ -132,76 +113,107 @@ public class FlappyBirdDuoGame extends JPanel implements ActionListener, KeyList
     }
 
     public void generateObstacle() {
-        int Space = space; // space between upper and lower obstacles
+        int space = this.space; // Space between upper and lower obstacles
         int width = 60;
-        int height = random.nextInt(300) + 50; // random height for the lower obstacle
+        int height = random.nextInt(300) + 50; // Random height for lower obstacle
     
-        obstacles.add(new Rectangle(800, 0, width, height)); // upper obstacle
-        obstacles.add(new Rectangle(800, height + Space, width, 600 - height - Space)); // lower obstacle
-    }
+        // Add upper and lower obstacles
+        obstacles.add(new Rectangle(800, 0, width, height)); // Upper obstacle
+        obstacles.add(new Rectangle(800, height + space, width, 600 - height - space)); // Lower obstacle
     
+        obstacleCount++;
+    
+        // Increase difficulty every 10 obstacles
+        if (obstacleCount % 10 == 0 && difficulty < 4) {
+            setDifficulty(difficulty);
+            playSound("Sounds/point.wav", gameVol);
+            difficulty++;
+        }
+    }    
+
     public void move() {
         if (!endGame && startGame) {
-            // Apply gravity
+            // Apply gravity to both birds
+            if (!SHIFTED) {
+                birdVelocityX += (birdVelocityX > 0) ? -gravity : gravity;
+                bird2VelocityX += (bird2VelocityX > 0) ? -gravity : gravity; // Second bird's velocity adjustment
+            }
             birdVelocity += gravity;
+            bird2Velocity += gravity;
+    
             birdY += birdVelocity;
+            birdX += birdVelocityX;
+            bird2Y += bird2Velocity; // Move second bird
+            bird2X += bird2VelocityX; // Move second bird
     
             // Move obstacles
             for (Rectangle obstacle : obstacles) {
-                obstacle.x -= velocity; // Adjust the speed of obstacles
+                obstacle.x -= velocity;
             }
     
-            // Check for collisions and generate new obstacles
-            Rectangle bird = new Rectangle(birdX, birdY, 50, 40);
+            // Check for collisions for both birds
+            Rectangle bird1 = new Rectangle(birdX, birdY, 50, 40);
+            Rectangle bird2 = new Rectangle(bird2X, bird2Y, 50, 40); // Second bird's rectangle
             for (Rectangle obstacle : obstacles) {
-                if (obstacle.intersects(bird) || birdY < 0 || birdY > 475) {
+                if (obstacle.intersects(bird1) || obstacle.intersects(bird2) || 
+                    birdY < 0 || birdY > 475 || birdX < 0 || birdX > 800 || 
+                    bird2Y < 0 || bird2Y > 475 || bird2X < 0 || bird2X > 800) { // Check for bird-to-bird collision
                     playSound("Sounds/bird-hit.wav", gameVol);
                     endGame = true;
+                    return;
                 }
-    
-                else if (birdX > obstacle.x && birdX < obstacle.x) {
-                    // Bird has passed the obstacle without colliding
-                    score += 0.5;
-                    playSound("Sounds/point.wav", gameVol); // Play a sound for scoring a point
+                else if(bird1.intersects(bird2)) { // Check for bird-to-bird collision
+                    playSound("Sounds/bird-hit.wav", gameVol);
+                    hit = 15;
+                    if (Math.abs(birdVelocityX) < Math.abs(bird2VelocityX)) {
+                        birdVelocityX += (birdX > bird2X) ? hit : -hit;
+                    } 
+                    
+                    else if (Math.abs(birdVelocityX) > Math.abs(bird2VelocityX)) {
+                        bird2VelocityX += (bird2X > birdX) ? hit : -hit;
+                    }
+                    return;
                 }
             }
     
+            // Generate new obstacles
             if (obstacles.get(obstacles.size() - 1).x < distance) {
                 generateObstacle();
             }
     
             // Remove off-screen obstacles
             obstacles.removeIf(obstacle -> obstacle.x + obstacle.width < 0);
-        }
-        else if(!endGame && !startGame){
-            // Apply gravity
-            if(Down){
-                birdY += 10;
-                Down = false;
-            } else{
-                birdY -= 10;
-                Down = true;
-            }
     
-            // Move obstacles (no movement when the game is over)
-            for (Rectangle obstacle : obstacles) {
-                obstacle.x -= 0; // Adjust the speed of obstacles
-            }
-        }
-        else if (endGame && startGame){
-            // Apply gravity
+        } else if (!endGame && !startGame) {
+            // Apply gravity to both birds in a different way when the game isn't started or ended
+            birdY += (Down) ? 10 : -10;
+            bird2Y += (Down) ? 10 : -10; // Apply gravity effect to second bird
+            Down = !Down;
+    
+            // Move obstacles (no movement when the game isn't started)
+            obstacles.forEach(obstacle -> obstacle.x -= 0);
+    
+        } else if (endGame && startGame) {
+            // Apply gravity to both birds during end game
             birdVelocity += gravity;
+            birdVelocityX = 0;
             birdY += birdVelocity;
+            birdX += birdVelocityX;
     
-            // Move obstacles (no movement when the game is over)
+            bird2Velocity += gravity; // Gravity for second bird
+            bird2VelocityX = 0;
+            bird2Y += bird2Velocity;
+            bird2X += bird2VelocityX;
+    
+            // Move obstacles (no movement during end game)
             for (Rectangle obstacle : obstacles) {
-                obstacle.x -= 0; // Adjust the speed of obstacles
-
-                if (birdY > 475) {
+                obstacle.x -= 0;
+                if (birdY > 475 || bird2Y > 475) { // Check for both birds
                     gameOver();
                 }
             }
     
+            // Generate new obstacles
             if (obstacles.get(obstacles.size() - 1).x < distance) {
                 generateObstacle();
             }
@@ -209,105 +221,122 @@ public class FlappyBirdDuoGame extends JPanel implements ActionListener, KeyList
             // Remove off-screen obstacles
             obstacles.removeIf(obstacle -> obstacle.x + obstacle.width < 0);
         }
-    }   
+    }    
 
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
-    
+        
         // Draw background image
         backgroundImage.paintIcon(this, g, 0, 0);
     
         // Draw obstacles
         for (Rectangle obstacle : obstacles) {
-            int pipeSpace = space; // space between upper and lower pipes
-            int lowerPipeHeight = 600 - obstacle.height - pipeSpace;
-
-            // Draw upper pipe
-            g.drawImage(upperPipeIcon.getImage(), obstacle.x, obstacle.y, obstacle.width, obstacle.height, this);    
-            // Draw lower pipe
+            int pipeSpace = space;
+            // Draw upper and lower pipes
+            g.drawImage(upperPipeIcon.getImage(), obstacle.x, obstacle.y, obstacle.width, obstacle.height, this);
             g.drawImage(lowerPipeIcon.getImage(), obstacle.x, obstacle.y + obstacle.height + pipeSpace, obstacle.width, obstacle.height, this);
         }
     
         // Draw ground
         base.paintIcon(this, g, 0, 520);
-
-        // Rotate and draw Flappy Bird image
+    
+        // Rotate and draw first Flappy Bird image
         Graphics2D g2d = (Graphics2D) g;
-        g2d.rotate(Math.toRadians(rotationAngle), birdX + 20, birdY + 22); // Adjust the rotation point
+        g2d.rotate(Math.toRadians(rotationAngle), birdX + 20, birdY + 22);
         flappyBirdIcon.paintIcon(this, g2d, birdX, birdY);
         g2d.rotate(-Math.toRadians(rotationAngle), birdX + 20, birdY + 22); // Reset rotation
     
-        // Display score with black stroke
-        g.setColor(Color.BLACK);
-        g.setFont(new Font("Arial", Font.PLAIN, 60));
-        String scoreString = Integer.toString((int) score);
-        FontMetrics metrics = g.getFontMetrics();
-
-        // Center horizontally
-        int x = (getWidth() - metrics.stringWidth(scoreString)) / 2;
-        int y = 100; // Adjust the vertical position
-
-        // Draw black outline
-        int strokeWidth = 2; // Adjust the stroke width as needed
-        ((Graphics2D) g).setStroke(new BasicStroke(strokeWidth));
-        for (int i = -1; i <= 1; i++) {
-            for (int j = -1; j <= 1; j++) {
-                g.drawString(scoreString, x + i * strokeWidth, y + j * strokeWidth);
-            }
-        }
-
-        // Draw white fill
-        g.setColor(Color.WHITE);
-        g.drawString(scoreString, x, y);
-
+        // Draw second Flappy Bird image (no rotation needed if similar behavior)
+        flappyBird2Icon.paintIcon(this, g, bird2X, bird2Y);
+    
+        // Draw start button if the game hasn't started or ended
         if (!endGame && !startGame) {
-            ImageIcon START = new ImageIcon("Images/StartButton.png");
-            START = new ImageIcon(START.getImage().getScaledInstance(150, 60, Image.SCALE_DEFAULT));
-        
-            int frameWidth = getWidth();  // Get the width of the frame
-            int buttonWidth = START.getIconWidth();
-            // Calculate the centered x-coordinate
-            int centerX = (frameWidth - buttonWidth) / 2;
-        
-            START.paintIcon(this, g, centerX, 400);
-        }        
-        getLevel((int) score);
-    }
+            ImageIcon startButtonIcon = new ImageIcon("Images/StartButton.png");
+            startButtonIcon = new ImageIcon(startButtonIcon.getImage().getScaledInstance(150, 60, Image.SCALE_DEFAULT));
+    
+            int centerX = (getWidth() - startButtonIcon.getIconWidth()) / 2;
+            startButtonIcon.paintIcon(this, g, centerX, 400);
+        }
+    }    
     
     public void actionPerformed(ActionEvent e) {
-        move();
-        repaint();
-    }
+        move();    // Move game elements
+        repaint(); // Refresh screen
+    }    
     
     public void keyPressed(KeyEvent e) {
-        if ((e.getKeyCode() == KeyEvent.VK_SPACE || e.getKeyCode() == KeyEvent.VK_UP) && !endGame) {
-            startGame = true;
-            timer.setDelay(Tick);
-            birdVelocity = -13;
-            rotationAngle = -20; // Adjust the rotation angle
-            playSound("Sounds/flap.wav", gameVol);
+        if (!endGame) {
+            int keyCode = e.getKeyCode();
+            switch (keyCode) {
+                // Controls for the first bird
+                case KeyEvent.VK_SPACE:
+                    startGame = true;
+                    timer.setDelay(Tick);
+                    break;
+                case KeyEvent.VK_W:
+                    birdVelocity = -13;
+                    rotationAngle = -20;
+                    playSound("Sounds/flap.wav", gameVol);
+                    break;
+                case KeyEvent.VK_S:
+                    birdVelocity = 10;
+                    rotationAngle = 20;
+                    playSound("Sounds/flap.wav", gameVol);
+                    break;
+                case KeyEvent.VK_D:
+                    birdVelocityX = 15;
+                    rotationAngle = -20;
+                    playSound("Sounds/flap.wav", gameVol);
+                    break;
+                case KeyEvent.VK_A:
+                    birdVelocityX = -15;
+                    rotationAngle = -20;
+                    playSound("Sounds/flap.wav", gameVol);
+                    break;
+                case KeyEvent.VK_SHIFT:
+                    SHIFTED = true;
+                    break;
+        
+                // Controls for the second bird
+                case KeyEvent.VK_UP:
+                    bird2Velocity = -13;
+                    playSound("Sounds/flap.wav", gameVol);
+                    break;
+                case KeyEvent.VK_DOWN:
+                    bird2Velocity = 10;
+                    playSound("Sounds/flap.wav", gameVol);
+                    break;
+                case KeyEvent.VK_RIGHT:
+                    bird2VelocityX = 15;
+                    playSound("Sounds/flap.wav", gameVol);
+                    break;
+                case KeyEvent.VK_LEFT:
+                    bird2VelocityX = -15;
+                    playSound("Sounds/flap.wav", gameVol);
+                    break;
+            }
         }
-        else if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
+    
+        if (e.getKeyCode() == KeyEvent.VK_ESCAPE) {
             timer.stop();
-        
-            ImageIcon pause = new ImageIcon("Images/pause.png");
-            pause = new ImageIcon(pause.getImage().getScaledInstance(30, 30, Image.SCALE_DEFAULT));
-        
-            // Show pause dialog with three options
+            
+            ImageIcon pauseIcon = new ImageIcon("Images/pause.png");
+            pauseIcon = new ImageIcon(pauseIcon.getImage().getScaledInstance(30, 30, Image.SCALE_DEFAULT));
+            
+            // Pause dialog with three options
             int choice = JOptionPane.showOptionDialog(
                     this,
                     "Game Paused",
                     "Pause",
                     JOptionPane.YES_NO_CANCEL_OPTION,
                     JOptionPane.INFORMATION_MESSAGE,
-                    pause,  // No icon for pause
+                    pauseIcon,
                     new Object[]{"Continue", "Restart", "Quit"},
                     "Continue"
             );
-        
+    
             // Handle user choice
             if (choice == JOptionPane.YES_OPTION) {
-                // Continue the game
                 timer.start();
             } else if (choice == JOptionPane.NO_OPTION) {
                 restartGame();
@@ -316,22 +345,30 @@ public class FlappyBirdDuoGame extends JPanel implements ActionListener, KeyList
             }
         }
     }
-    
+
     public void keyReleased(KeyEvent e) {
-        if (e.getKeyCode() == KeyEvent.VK_SPACE) {
-            rotationAngle = 30; // Adjust the rotation angle when releasing
+        int keyCode = e.getKeyCode();
+    
+        // Common action for all birds
+        if (keyCode == KeyEvent.VK_SPACE || keyCode == KeyEvent.VK_W || keyCode == KeyEvent.VK_UP) {
+            rotationAngle = 30; // Set rotation angle when Space, W, or Up is released
+        }
+    
+        // Reset flags and velocities
+        if (keyCode == KeyEvent.VK_SHIFT) {
+            SHIFTED = false; // Reset SHIFTED flag
         }
     }
     
-    public void keyTyped(KeyEvent e) {}    
+    public void keyTyped(KeyEvent e) {} // No action required     
 
     public void gameOver() {
-        timer.stop();
-
+        timer.stop(); // Stop the game timer
+    
         // Resize the dead bird image
         deadBird = new ImageIcon(deadBird.getImage().getScaledInstance(45, 45, Image.SCALE_DEFAULT));
-
-        // Show game over dialog with options
+    
+        // Display game over dialog
         int choice = JOptionPane.showOptionDialog(
                 this,
                 "You Lose",
@@ -342,33 +379,38 @@ public class FlappyBirdDuoGame extends JPanel implements ActionListener, KeyList
                 new Object[]{"Retry", "Quit"},
                 "Retry"
         );
-
-        // Handle user choice
-        if (choice == 0) {
-            // Retry the game
-            restartGame();
+    
+        // Handle the user's choice
+        if (choice == JOptionPane.YES_OPTION) {
+            restartGame(); // Restart the game
         } else {
-            // Quit the game
-            System.exit(0);
+            System.exit(0); // Exit the game
         }
-    }
+    }    
 
     public void restartGame() {
-        // Reset game variables
-        score = 0;
+        // Reset game variables for the first bird
+        birdX = 200;
         birdY = 250;
-        birdVelocity = 0;
+        birdVelocity = birdVelocityX = 0;
+        
+        // Reset game variables for the second bird
+        bird2X = 600; // Reset position for second bird
+        bird2Y = 250;
+        bird2Velocity = bird2VelocityX = 0;
+    
         rotationAngle = 0;
-        startGame = false;
-        endGame = false;
-
-        // Clear obstacles and generate a new one
+        difficulty = 1;
+        obstacleCount = 0;
+        startGame = endGame = false;
+    
+        // Reset difficulty and obstacles
         setDifficulty(1);
         obstacles.clear();
         generateObstacle();
-
-        // Restart the timer
+    
+        // Restart game timer
         timer.setDelay(150);
         timer.start();
-    }
+    }    
 }
